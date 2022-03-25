@@ -46,14 +46,29 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
-class DummyViewModel() {
+class BallViewModel() {
 
-    val coordinates = MutableStateFlow<Vector>(Vector(0f, 0f))
+    val coordinates = MutableStateFlow<BallState>(
+        BallState(
+            Vector(0f, 0f),
+            0,
+        )
+    )
 
-    suspend fun updateCoordinates(x: Float, y: Float) {
-        coordinates.emit(Vector(x, y))
+    suspend fun updateState(ballSize: Int, x: Float, y: Float) {
+        coordinates.emit(
+            BallState(
+                Vector(x, y),
+                ballSize,
+            )
+        )
     }
 }
+
+data class BallState(
+    val position: Vector,
+    val size: Int,
+)
 
 data class Vector(
     val x: Float,
@@ -80,7 +95,7 @@ class MainActivity : ComponentActivity() {
                             modifier = Modifier
                                 .fillMaxSize()
                                 .background(Color.Gray),
-                            game.dummyViewModel
+                            game.ballViewModel
                         )
                         PlatformContainer(Modifier.align(Alignment.BottomStart))
                     }
@@ -105,17 +120,17 @@ class Game(
 
     private var ball: Ball = Ball(0f, 0f)
 
-    val dummyViewModel: DummyViewModel = DummyViewModel()
+    val ballViewModel: BallViewModel = BallViewModel()
 
     suspend fun updateState() {
-        updateBallDirection()
         updateBallPosition()
+        updateBallDirection()
 
-        dummyViewModel.updateCoordinates(ball.position.x, ball.position.y)
+        ballViewModel.updateState(ball.size, ball.position.x, ball.position.y)
     }
 
     private fun updateBallDirection() {
-        if (ball.position.x > screenWidth || ball.position.x < 0) {
+        if (ball.position.x + ball.size > screenWidth || ball.position.x < 0) {
             val currentDirection = ball.direction
             val newDirection = Vector(
                 -currentDirection.x,
@@ -123,7 +138,7 @@ class Game(
             )
             ball.direction = newDirection
         }
-        if (ball.position.y > screenHeight || ball.position.y < 0) {
+        if (ball.position.y + ball.size > screenHeight || ball.position.y < 0) {
             val currentDirection = ball.direction
             val newDirection = Vector(
                 currentDirection.x,
@@ -149,6 +164,7 @@ class Ball(
     posY: Float,
 ) {
 
+    var size = 10
     var position = Vector(posX, posY)
 
     var direction = Vector(1f, 1f)
@@ -207,17 +223,18 @@ fun PlatformContainer(modifier: Modifier) {
 }
 
 @Composable
-fun BallScreen(modifier: Modifier, dummyViewModel: DummyViewModel) {
+fun BallScreen(modifier: Modifier, ballViewModel: BallViewModel) {
     Box(modifier = modifier) {
-        Ball(dummyViewModel)
+        Ball(ballViewModel)
     }
 }
 
 @Composable
-fun Ball(dummyViewModel: DummyViewModel) {
-    val pos = dummyViewModel.coordinates.collectAsState()
-    val posX = pos.value.x
-    val posY = pos.value.y
+fun Ball(ballViewModel: BallViewModel) {
+    val state = ballViewModel.coordinates.collectAsState().value
+    val posX = state.position.x
+    val posY = state.position.y
+    val ballSize = state.size
 
     Box(
         Modifier
@@ -225,7 +242,7 @@ fun Ball(dummyViewModel: DummyViewModel) {
     ) {
         Box(
             modifier = Modifier
-                .size(10.dp)
+                .size(ballSize.dp)
                 .clip(CircleShape)
                 .background(Color.Black)
         )
