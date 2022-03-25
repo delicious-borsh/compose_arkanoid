@@ -1,6 +1,9 @@
 package com.ponykamni.arcanoid
 
+import android.app.Activity
+import android.graphics.Point
 import android.os.Bundle
+import android.view.Display
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -45,14 +48,14 @@ import kotlin.math.roundToInt
 
 class DummyViewModel() {
 
-    val coordinates = MutableStateFlow<Coordinates>(Coordinates(0f, 0f))
+    val coordinates = MutableStateFlow<Vector>(Vector(0f, 0f))
 
     suspend fun updateCoordinates(x: Float, y: Float) {
-        coordinates.emit(Coordinates(x, y))
+        coordinates.emit(Vector(x, y))
     }
 }
 
-data class Coordinates(
+data class Vector(
     val x: Float,
     val y: Float,
 )
@@ -62,10 +65,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val dummyViewModel = DummyViewModel()
-
-
-
+        val (width, height) = getScreenSize(this)
+        val game = Game(width, height)
         setContent {
             ArcanoidTheme {
                 Surface(
@@ -79,7 +80,7 @@ class MainActivity : ComponentActivity() {
                             modifier = Modifier
                                 .fillMaxSize()
                                 .background(Color.Gray),
-                            dummyViewModel
+                            game.dummyViewModel
                         )
                         PlatformContainer(Modifier.align(Alignment.BottomStart))
                     }
@@ -88,14 +89,80 @@ class MainActivity : ComponentActivity() {
         }
 
         CoroutineScope(Dispatchers.IO).launch {
-            var x = 0f
-            var y = 0f
+
             while (true) {
-                dummyViewModel.updateCoordinates(x++, y++)
+                game.updateState()
                 delay(10)
             }
         }
     }
+}
+
+class Game(
+    private val screenWidth: Int,
+    private val screenHeight: Int,
+) {
+
+    private var ball: Ball = Ball(0f, 0f)
+
+    val dummyViewModel: DummyViewModel = DummyViewModel()
+
+    suspend fun updateState() {
+        updateBallDirection()
+        updateBallPosition()
+
+        dummyViewModel.updateCoordinates(ball.position.x, ball.position.y)
+    }
+
+    private fun updateBallDirection() {
+        if (ball.position.x > screenWidth || ball.position.x < 0) {
+            val currentDirection = ball.direction
+            val newDirection = Vector(
+                -currentDirection.x,
+                currentDirection.y
+            )
+            ball.direction = newDirection
+        }
+        if (ball.position.y > screenHeight || ball.position.y < 0) {
+            val currentDirection = ball.direction
+            val newDirection = Vector(
+                currentDirection.x,
+                -currentDirection.y
+            )
+            ball.direction = newDirection
+        }
+    }
+
+    private fun updateBallPosition() {
+        val currentPosition = ball.position
+        val direction = ball.direction
+
+        val newPositionX = (currentPosition.x + direction.x)
+        val newPositionY = (currentPosition.y + direction.y)
+
+        ball.position = Vector(newPositionX, newPositionY)
+    }
+}
+
+class Ball(
+    posX: Float,
+    posY: Float,
+) {
+
+    var position = Vector(posX, posY)
+
+    var direction = Vector(1f, 1f)
+    var velocity: Float = 1f
+}
+
+fun getScreenSize(activity: Activity): Pair<Int, Int> {
+    val display: Display = activity.windowManager.defaultDisplay
+    val size = Point()
+    display.getSize(size)
+    val width: Int = size.x
+    val height: Int = size.y
+
+    return width to height
 }
 
 @Composable
