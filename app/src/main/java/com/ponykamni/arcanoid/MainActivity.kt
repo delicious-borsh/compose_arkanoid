@@ -9,6 +9,7 @@ import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -22,6 +23,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
@@ -38,13 +40,18 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             ArcanoidTheme {
-                // A surface container using the 'background' color from the theme
                 Surface(
-                    modifier = Modifier
-                        .fillMaxWidth(),
+                    modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colors.background
                 ) {
-                    PlatformContainer()
+                    Box(
+                        modifier = Modifier
+                    ) {
+                        Box(
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        PlatformContainer(Modifier.align(Alignment.BottomStart))
+                    }
                 }
             }
         }
@@ -64,13 +71,13 @@ fun getScreenDensity(): Float {
 }
 
 @Composable
-fun PlatformContainer() {
+fun PlatformContainer(modifier: Modifier) {
     var offsetX by remember { mutableStateOf(0f) }
     var size by remember { mutableStateOf(IntSize.Zero) }
 
     val screenSize = getScreenWidthInPixels()
 
-    Column {
+    Column(modifier) {
         Text(text = "Offset = $offsetX, size = $size")
         Box(modifier = Modifier.wrapContentSize()) {
             Platform(
@@ -97,7 +104,7 @@ fun Platform(modifier: Modifier) {
     Box(
         modifier = modifier
             .width(150.dp)
-            .height(20.dp)
+            .height(50.dp)
             .background(MaterialTheme.colors.secondary),
     )
 }
