@@ -20,6 +20,7 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -29,19 +30,42 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.ponykamni.arcanoid.ui.theme.ArcanoidTheme
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
+
+class DummyViewModel() {
+
+    val coordinates = MutableStateFlow<Coordinates>(Coordinates(0f, 0f))
+
+    suspend fun updateCoordinates(x: Float, y: Float) {
+        coordinates.emit(Coordinates(x, y))
+    }
+}
+
+data class Coordinates(
+    val x: Float,
+    val y: Float,
+)
 
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        val dummyViewModel = DummyViewModel()
+
+
+
         setContent {
             ArcanoidTheme {
                 Surface(
@@ -54,11 +78,21 @@ class MainActivity : ComponentActivity() {
                         BallScreen(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .background(Color.Gray)
+                                .background(Color.Gray),
+                            dummyViewModel
                         )
                         PlatformContainer(Modifier.align(Alignment.BottomStart))
                     }
                 }
+            }
+        }
+
+        CoroutineScope(Dispatchers.IO).launch {
+            var x = 0f
+            var y = 0f
+            while (true) {
+                dummyViewModel.updateCoordinates(x++, y++)
+                delay(10)
             }
         }
     }
@@ -106,24 +140,21 @@ fun PlatformContainer(modifier: Modifier) {
 }
 
 @Composable
-fun BallScreen(modifier: Modifier) {
+fun BallScreen(modifier: Modifier, dummyViewModel: DummyViewModel) {
     Box(modifier = modifier) {
-        Ball()
+        Ball(dummyViewModel)
     }
 }
 
 @Composable
-fun Ball() {
-    var posX by remember { mutableStateOf(0f) }
-    var posY by remember { mutableStateOf(0f) }
+fun Ball(dummyViewModel: DummyViewModel) {
+    val pos = dummyViewModel.coordinates.collectAsState()
+    val posX = pos.value.x
+    val posY = pos.value.y
 
     Box(
         Modifier
-            .onGloballyPositioned { coordinates ->
-                posX = coordinates.positionInRoot().x
-                posY = coordinates.positionInRoot().y
-            }
-            .offset { IntOffset( 150, 500) }
+            .offset { IntOffset(posX.toInt(), posY.toInt()) }
     ) {
         Box(
             modifier = Modifier
