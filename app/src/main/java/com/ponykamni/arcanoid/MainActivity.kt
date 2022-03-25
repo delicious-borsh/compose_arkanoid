@@ -10,11 +10,12 @@ import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
@@ -25,7 +26,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
@@ -47,8 +51,10 @@ class MainActivity : ComponentActivity() {
                     Box(
                         modifier = Modifier
                     ) {
-                        Box(
-                            modifier = Modifier.fillMaxWidth(),
+                        BallScreen(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color.Gray)
                         )
                         PlatformContainer(Modifier.align(Alignment.BottomStart))
                     }
@@ -96,6 +102,36 @@ fun PlatformContainer(modifier: Modifier) {
                     )
             )
         }
+    }
+}
+
+@Composable
+fun BallScreen(modifier: Modifier) {
+    Box(modifier = modifier) {
+        Ball()
+    }
+}
+
+@Composable
+fun Ball() {
+    var posX by remember { mutableStateOf(0f) }
+    var posY by remember { mutableStateOf(0f) }
+
+    Box(
+        Modifier
+            .onGloballyPositioned { coordinates ->
+                posX = coordinates.positionInRoot().x
+                posY = coordinates.positionInRoot().y
+            }
+            .offset { IntOffset( 150, 500) }
+    ) {
+        Box(
+            modifier = Modifier
+                .size(10.dp)
+                .clip(CircleShape)
+                .background(Color.Black)
+        )
+        Text(text = "$posX, $posY")
     }
 }
 
