@@ -179,8 +179,25 @@ class Game(
                 -currentDirection.y
             )
             ball.direction = newDirection
-            menuViewModel.state.emit(MenuState("CHECK"))
+
+            val collisionPointToPlatformWidthRatio = getCollisionPointToPlatformWidthRation(
+                ball.position.x,
+                platform.position.x,
+                platform.width
+            )
+
+            menuViewModel.state.emit(MenuState(collisionPointToPlatformWidthRatio.toString()))
         }
+    }
+
+    private fun getCollisionPointToPlatformWidthRation(
+        ballPositionX: Float,
+        platformPositionX: Float,
+        platformWidth: Float
+    ): Float {
+        val ballPositionInRespectToPlatform = ballPositionX - platformPositionX
+
+        return ballPositionInRespectToPlatform / platformWidth
     }
 
     private fun checkBordersCollision() {
