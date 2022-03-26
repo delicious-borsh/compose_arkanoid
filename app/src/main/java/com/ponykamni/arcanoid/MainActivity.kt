@@ -85,25 +85,7 @@ class MainActivity : ComponentActivity() {
         val game = Game(width, height)
         setContent {
             ArcanoidTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colors.background
-                ) {
-                    Box(
-                        modifier = Modifier
-                    ) {
-                        BallScreen(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(Color.Gray),
-                            game.ballViewModel
-                        )
-                        PlatformContainer(
-                            Modifier.align(Alignment.BottomStart),
-                            game.platformViewModel
-                        )
-                    }
-                }
+                GameScreen(game = game)
             }
         }
 
@@ -117,6 +99,52 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@Composable
+fun GameScreen(game: Game) {
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colors.background
+    ) {
+        Box(
+            modifier = Modifier
+        ) {
+            BallScreen(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Gray),
+                game.ballViewModel
+            )
+            Menu(
+                modifier = Modifier.align(Alignment.TopStart),
+                game.menuViewModel
+            )
+            PlatformContainer(
+                Modifier.align(Alignment.BottomStart),
+                game.platformViewModel
+            )
+        }
+    }
+}
+
+class MenuViewModel {
+
+    val state = MutableStateFlow<MenuState>(MenuState("Initial State"))
+}
+
+data class MenuState(
+    val text: String,
+)
+
+@Composable
+fun Menu(modifier: Modifier, menuViewModel: MenuViewModel) {
+
+    val text = menuViewModel.state.collectAsState().value.text
+
+    Box(modifier) {
+        Text(modifier = Modifier, text = text)
+    }
+}
+
 class Game(
     private val screenWidth: Int,
     private val screenHeight: Int,
@@ -127,6 +155,7 @@ class Game(
 
     val ballViewModel: BallViewModel = BallViewModel()
     val platformViewModel: PlatformViewModel = PlatformViewModel()
+    val menuViewModel: MenuViewModel = MenuViewModel()
 
     suspend fun updateState() {
         platform.position = platformViewModel.position
@@ -139,18 +168,19 @@ class Game(
         ballViewModel.updateState(ball.size, ball.position.x, ball.position.y)
     }
 
-    private fun checkPlatformCollision() {
+    private suspend fun checkPlatformCollision() {
         if (ball.position.y >= platform.position.y
             && ball.position.x < platform.position.x + platform.width
-            && ball.position.x > platform.position.x) {
+            && ball.position.x > platform.position.x
+        ) {
             val currentDirection = ball.direction
             val newDirection = Vector(
                 currentDirection.x,
                 -currentDirection.y
             )
             ball.direction = newDirection
+            menuViewModel.state.emit(MenuState("CHECK"))
         }
-
     }
 
     private fun checkBordersCollision() {
@@ -314,6 +344,6 @@ fun Platform(modifier: Modifier) {
 @Composable
 fun DefaultPreview() {
     ArcanoidTheme {
-        Platform(Modifier)
+        GameScreen(game = Game(0, 0))
     }
 }
