@@ -33,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
@@ -97,7 +98,10 @@ class MainActivity : ComponentActivity() {
                                 .background(Color.Gray),
                             game.ballViewModel
                         )
-                        PlatformContainer(Modifier.align(Alignment.BottomStart))
+                        PlatformContainer(
+                            Modifier.align(Alignment.BottomStart),
+                            game.platformViewModel
+                        )
                     }
                 }
             }
@@ -107,7 +111,7 @@ class MainActivity : ComponentActivity() {
 
             while (true) {
                 game.updateState()
-                delay(10)
+                delay(1)
             }
         }
     }
@@ -119,17 +123,37 @@ class Game(
 ) {
 
     private var ball: Ball = Ball(0f, 0f)
+    private var platform: Platform = Platform()
 
     val ballViewModel: BallViewModel = BallViewModel()
+    val platformViewModel: PlatformViewModel = PlatformViewModel()
 
     suspend fun updateState() {
+        platform.position = platformViewModel.position
+        platform.width = platformViewModel.width
+
         updateBallPosition()
-        updateBallDirection()
+        checkPlatformCollision()
+        checkBordersCollision()
 
         ballViewModel.updateState(ball.size, ball.position.x, ball.position.y)
     }
 
-    private fun updateBallDirection() {
+    private fun checkPlatformCollision() {
+        if (ball.position.y >= platform.position.y
+            && ball.position.x < platform.position.x + platform.width
+            && ball.position.x > platform.position.x) {
+            val currentDirection = ball.direction
+            val newDirection = Vector(
+                currentDirection.x,
+                -currentDirection.y
+            )
+            ball.direction = newDirection
+        }
+
+    }
+
+    private fun checkBordersCollision() {
         if (ball.position.x + ball.size > screenWidth || ball.position.x < 0) {
             val currentDirection = ball.direction
             val newDirection = Vector(
@@ -171,6 +195,12 @@ class Ball(
     var velocity: Float = 1f
 }
 
+class Platform {
+
+    var position: Vector = Vector(0f, 0f)
+    var width: Float = 0f
+}
+
 fun getScreenSize(activity: Activity): Pair<Int, Int> {
     val display: Display = activity.windowManager.defaultDisplay
     val size = Point()
@@ -194,18 +224,22 @@ fun getScreenDensity(): Float {
 }
 
 @Composable
-fun PlatformContainer(modifier: Modifier) {
+fun PlatformContainer(modifier: Modifier, platformViewModel: PlatformViewModel) {
     var offsetX by remember { mutableStateOf(0f) }
     var size by remember { mutableStateOf(IntSize.Zero) }
+    var posY by remember { mutableStateOf(0f) }
 
     val screenSize = getScreenWidthInPixels()
 
     Column(modifier) {
-        Text(text = "Offset = $offsetX, size = $size")
+        Text(text = "Offset = $offsetX, positionY = $posY")
         Box(modifier = Modifier.wrapContentSize()) {
             Platform(
                 Modifier
-                    .onGloballyPositioned { coordinates -> size = coordinates.size }
+                    .onGloballyPositioned { coordinates ->
+                        size = coordinates.size
+                        posY = coordinates.positionInRoot().y
+                    }
                     .offset { IntOffset(offsetX.roundToInt(), 0) }
                     .draggable(
                         orientation = Orientation.Horizontal,
@@ -214,11 +248,27 @@ fun PlatformContainer(modifier: Modifier) {
 
                             if (newOffset > 0 && newOffset + size.width < screenSize) {
                                 offsetX = newOffset
+                                val newPosition = Vector(newOffset, posY)
+                                platformViewModel.updateCoordinates(newPosition, size.width.toFloat())
                             }
                         }
                     )
             )
         }
+    }
+}
+
+class PlatformViewModel {
+
+    @Volatile
+    var position: Vector = Vector(0f, 0f)
+
+    @Volatile
+    var width: Float = 0f
+
+    fun updateCoordinates(pos: Vector, width: Float) {
+        this.position = pos
+        this.width = width
     }
 }
 
@@ -254,8 +304,8 @@ fun Ball(ballViewModel: BallViewModel) {
 fun Platform(modifier: Modifier) {
     Box(
         modifier = modifier
-            .width(150.dp)
-            .height(50.dp)
+            .width(80.dp)
+            .height(30.dp)
             .background(MaterialTheme.colors.secondary),
     )
 }
